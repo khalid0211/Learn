@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f5f5f5;
+        }
+        
+        .calculator {
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 340px;
+        }
+        
+        #display {
+            width: 100%;
+            height: 50px;
+            font-size: 24px;
+            text-align: right;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            background: #fff;
+        }
+        
+        .data-input {
+            width: 100%;
+            height: 40px;
+            font-size: 14px;
+            text-align: left;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            background: #fafafa;
+        }
+        
+        .data-input::placeholder {
+            color: #999;
+        }
+        
+        .section-title {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        
+        button {
+            padding: 12px;
+            font-size: 14px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .number {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .number:hover {
+            background: #bbdefb;
+        }
+        
+        .operator {
+            background: #1976d2;
+            color: white;
+        }
+        
+        .operator:hover {
+            background: #1565c0;
+        }
+        
+        .equals {
+            background: #1976d2;
+            color: white;
+            grid-column: span 2;
+        }
+        
+        .equals:hover {
+            background: #1565c0;
+        }
+        
+        .clear {
+            background: #ffcdd2;
+            color: #c62828;
+        }
+        
+        .clear:hover {
+            background: #ef9a9a;
+        }
+        
+        .stats {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .stats:hover {
+            background: #c8e6c9;
+        }
+        
+        .stat-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 15px;
+        }
+        
+        .stat-row button {
+            padding: 10px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <input type="text" id="display" readonly>
+        
+        <div class="section-title">Data (comma or space separated)</div>
+        <input type="text" id="dataInput" class="data-input" placeholder="e.g. 1, 2, 3, 4, 5">
+        
+        <div class="buttons">
+            <button class="clear" onclick="clearDisplay()">C</button>
+            <button class="operator" onclick="appendOperator('/')">/</button>
+            <button class="operator" onclick="appendOperator('*')">×</button>
+            <button class="operator" onclick="appendOperator('-')">-</button>
+            
+            <button class="number" onclick="appendNumber('7')">7</button>
+            <button class="number" onclick="appendNumber('8')">8</button>
+            <button class="number" onclick="appendNumber('9')">9</button>
+            <button class="operator" onclick="appendOperator('+')">+</button>
+            
+            <button class="number" onclick="appendNumber('4')">4</button>
+            <button class="number" onclick="appendNumber('5')">5</button>
+            <button class="number" onclick="appendNumber('6')">6</button>
+            <button class="number" onclick="appendNumber('.')">.</button>
+            
+            <button class="number" onclick="appendNumber('1')">1</button>
+            <button class="number" onclick="appendNumber('2')">2</button>
+            <button class="number" onclick="appendNumber('3')">3</button>
+            <button class="equals" onclick="calculate()">=</button>
+            
+            <button class="number" onclick="appendNumber('0')" style="grid-column: span 2;">0</button>
+        </div>
+        
+        <div class="stat-row">
+            <button class="stats" onclick="calculateMean()">Mean</button>
+            <button class="stats" onclick="calculateMedian()">Median</button>
+            <button class="stats" onclick="calculateMode()">Mode</button>
+            <button class="stats" onclick="calculateVariance()">Variance</button>
+            <button class="stats" onclick="calculateStdDev()">Std Dev</button>
+            <button class="clear" onclick="clearData()">Clear Data</button>
+        </div>
+    </div>
+
+    <script>
+        const display = document.getElementById('display');
+        const dataInput = document.getElementById('dataInput');
+        
+        function appendNumber(num) {
+            display.value += num;
+        }
+        
+        function appendOperator(op) {
+            if (display.value !== '') {
+                display.value += op;
+            }
+        }
+        
+        function clearDisplay() {
+            display.value = '';
+        }
+        
+        function clearData() {
+            dataInput.value = '';
+            display.value = '';
+        }
+        
+        function calculate() {
+            try {
+                display.value = eval(display.value);
+            } catch {
+                display.value = 'Error';
+            }
+        }
+        
+        function getData() {
+            const input = dataInput.value.replace(/[\s,]+/g, ',').split(',').filter(x => x !== '');
+            return input.map(Number).filter(n => !isNaN(n));
+        }
+        
+        function calculateMean() {
+            const data = getData();
+            if (data.length === 0) {
+                display.value = 'No data';
+                return;
+            }
+            const sum = data.reduce((a, b) => a + b, 0);
+            display.value = (sum / data.length).toFixed(4);
+        }
+        
+        function calculateMedian() {
+            const data = getData();
+            if (data.length === 0) {
+                display.value = 'No data';
+                return;
+            }
+            data.sort((a, b) => a - b);
+            const mid = Math.floor(data.length / 2);
+            display.value = data.length % 2 !== 0 
+                ? data[mid] 
+                : ((data[mid - 1] + data[mid]) / 2).toFixed(4);
+        }
+        
+        function calculateMode() {
+            const data = getData();
+            if (data.length === 0) {
+                display.value = 'No data';
+                return;
+            }
+            const freq = {};
+            let maxFreq = 0;
+            data.forEach(n => {
+                freq[n] = (freq[n] || 0) + 1;
+                maxFreq = Math.max(maxFreq, freq[n]);
+            });
+            const modes = Object.keys(freq).filter(k => freq[k] === maxFreq);
+            display.value = modes.length === data.length ? 'No mode' : modes.join(', ');
+        }
+        
+        function calculateVariance() {
+            const data = getData();
+            if (data.length === 0) {
+                display.value = 'No data';
+                return;
+            }
+            const mean = data.reduce((a, b) => a + b, 0) / data.length;
+            const squaredDiffs = data.map(n => Math.pow(n - mean, 2));
+            const variance = squaredDiffs.reduce((a, b) => a + b, 0) / data.length;
+            display.value = variance.toFixed(4);
+        }
+        
+        function calculateStdDev() {
+            const data = getData();
+            if (data.length === 0) {
+                display.value = 'No data';
+                return;
+            }
+            const mean = data.reduce((a, b) => a + b, 0) / data.length;
+            const squaredDiffs = data.map(n => Math.pow(n - mean, 2));
+            const variance = squaredDiffs.reduce((a, b) => a + b, 0) / data.length;
+            display.value = Math.sqrt(variance).toFixed(4);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+Sr#,Department,Fully Met,Fully Met %,Partially Met,Partially Met %,Not Met,Not Met %,Not Applicable
+1,Admin,6,60,4,40,0,0,0
+2,Anesthesia,5,50,5,50,0,0,0
+3,Biomedical,2,50,2,50,0,0,0
+4,Blood Bank Services,2,40,1,20,2,40,0
+5,CSSD,2,66.67,1,33.33,0,0,0
+6,Emergency Services,5,83.33,1,16.67,0,0,0
+7,Finance,2,50,1,25,1,25,0
+8,Fire & Safety,1,25,1,25,2,50,0
+9,Gynae & Obs,5,100,0,0,0,0,0
+10,Housekeeping,1,100,0,0,0,0,0
+11,Human Resource,7,50,5,35.71,2,14.29,0
+12,Infection Control,3,60,0,0,2,40,0
+13,IT,3,75,1,25,0,0,0
+14,IT & Medical Record,4,26.67,4,26.67,7,46.67,0
+15,Laboratory Services,3,50,2,33.33,1,16.67,0
+16,Maintenance,4,100,0,0,0,0,0
+17,Nursing Services,6,60,4,40,0,0,0
+18,OPD,1,25,3,75,0,0,0
+19,Pharmacy,5,45.45,5,45.45,1,9.09,0
+20,QIPS,2,10.53,15,78.95,2,10.53,0
+21,Radiology Services,6,75,1,12.5,1,12.5,0
+22,Surgical Services,8,80,2,20,0,0,0
+-,Sum & Percentage,83,51.23,58,35.8,21,12.96,0

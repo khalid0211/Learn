@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distance Calculator - Pakistan</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f5f5f5;
+        }
+        
+        .calculator {
+            background: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            width: 350px;
+        }
+        
+        h2 {
+            text-align: center;
+            color: #1976d2;
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: bold;
+        }
+        
+        select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            background: #fff;
+        }
+        
+        .arrow {
+            text-align: center;
+            font-size: 24px;
+            color: #1976d2;
+            margin: 10px 0;
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #1976d2;
+            color: white;
+            transition: background 0.2s;
+        }
+        
+        button:hover {
+            background: #1565c0;
+        }
+        
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e3f2fd;
+            border-radius: 5px;
+            text-align: center;
+            display: none;
+        }
+        
+        .result.show {
+            display: block;
+        }
+        
+        .result .distance {
+            font-size: 32px;
+            color: #1976d2;
+            font-weight: bold;
+        }
+        
+        .result .route {
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <h2>Distance Calculator</h2>
+        
+        <label>From</label>
+        <select id="fromCity">
+            <option value="">Select City</option>
+            <option value="karachi">Karachi</option>
+            <option value="lahore">Lahore</option>
+            <option value="faisalabad">Faisalabad</option>
+            <option value="rawalpindi">Rawalpindi</option>
+            <option value="islamabad">Islamabad</option>
+        </select>
+        
+        <div class="arrow">↓</div>
+        
+        <label>To</label>
+        <select id="toCity">
+            <option value="">Select City</option>
+            <option value="karachi">Karachi</option>
+            <option value="lahore">Lahore</option>
+            <option value="faisalabad">Faisalabad</option>
+            <option value="rawalpindi">Rawalpindi</option>
+            <option value="islamabad">Islamabad</option>
+        </select>
+        
+        <button onclick="calculateDistance()">Get Distance</button>
+        
+        <div class="result" id="result">
+            <div class="distance"><span id="distance">0</span> km</div>
+            <div class="route"><span id="fromDisplay"></span> → <span id="toDisplay"></span></div>
+        </div>
+    </div>
+
+    <script>
+        const distances = {
+            karachi: { lahore: 1240, faisalabad: 1080, rawalpindi: 1420, islamabad: 1440 },
+            lahore: { karachi: 1240, faisalabad: 180, rawalpindi: 380, islamabad: 380 },
+            faisalabad: { karachi: 1080, lahore: 180, rawalpindi: 320, islamabad: 320 },
+            rawalpindi: { karachi: 1420, lahore: 380, faisalabad: 320, islamabad: 25 },
+            islamabad: { karachi: 1440, lahore: 380, faisalabad: 320, rawalpindi: 25 }
+        };
+        
+        function calculateDistance() {
+            const from = document.getElementById('fromCity').value;
+            const to = document.getElementById('toCity').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!from || !to) {
+                alert('Please select both cities');
+                return;
+            }
+            
+            if (from === to) {
+                alert('Please select different cities');
+                return;
+            }
+            
+            const distance = distances[from][to];
+            document.getElementById('distance').textContent = distance;
+            document.getElementById('fromDisplay').textContent = from.charAt(0).toUpperCase() + from.slice(1);
+            document.getElementById('toDisplay').textContent = to.charAt(0).toUpperCase() + to.slice(1);
+            resultDiv.classList.add('show');
+        }
+    </script>
+</body>
+</html>

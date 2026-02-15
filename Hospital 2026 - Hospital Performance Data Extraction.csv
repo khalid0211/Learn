@@ -1,0 +1,24 @@
+Department,Fully Met,Fully Met %,Partially Met,Partially Met %,Not Met,Not Met %,Not Applicable
+Admin,9,90,0,0,1,10,0
+Anesthesia,10,100,0,0,0,0,0
+Biomedical,3,75,1,25,0,0,0
+Blood Bank Services,3,60,2,40,0,0,0
+CSSD,3,100,0,0,0,0,0
+Emergency Services,5,83.33,1,16.67,0,0,0
+Finance,4,100,0,0,0,0,0
+Fire & Safety,4,100,0,0,0,0,0
+Gynae & Obs,5,100,0,0,0,0,0
+Housekeeping,0,0,1,100,0,0,0
+Human Resource,14,100,0,0,0,0,0
+Infection Control,4,80,1,20,0,0,0
+IT,3,75,1,25,0,0,0
+IT & Medical Record,7,50,1,7.14,6,42.86,1
+Laboratory Services,6,100,0,0,0,0,0
+Maintenance,3,75,1,25,0,0,0
+Nursing Services,8,80,2,20,0,0,0
+OPD,3,75,1,25,0,0,0
+Pharmacy,10,90.91,1,9.09,0,0,0
+QIPS,17,89.47,2,10.53,0,0,0
+Radiology Services,7,87.5,1,12.5,0,0,0
+Surgical Services,10,100,0,0,0,0,0
+Total Sum & Percentage,138,85.71,16,9.94,7,4.35,1
