@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Funding / Spending Calculator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header { text-align: center; color: white; margin-bottom: 24px; }
+        .header h1 { font-size: 2.2rem; margin-bottom: 6px; }
+        .header p { font-size: 1rem; opacity: 0.9; }
+
+        /* Tabs */
+        .tab-nav {
+            display: flex; gap: 0; margin-bottom: 24px;
+            background: rgba(255,255,255,0.2); border-radius: 12px; padding: 4px;
+        }
+        .tab-btn {
+            flex: 1; padding: 12px 24px; border: none; background: transparent;
+            color: rgba(255,255,255,0.7); font-size: 16px; font-weight: 600;
+            cursor: pointer; border-radius: 10px; transition: all 0.3s;
+        }
+        .tab-btn.active { background: white; color: #667eea; box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Cards & Panels */
+        .panel {
+            background: white; border-radius: 15px; padding: 28px;
+            margin-bottom: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+        .panel h2 { color: #333; margin-bottom: 18px; font-size: 1.2rem; }
+        .input-group { display: flex; gap: 18px; flex-wrap: wrap; }
+        .input-box { flex: 1; min-width: 200px; }
+        .input-box label { display: block; margin-bottom: 6px; color: #555; font-weight: 600; font-size: 13px; }
+        .input-box input {
+            width: 100%; padding: 10px 12px; border: 2px solid #e0e0e0;
+            border-radius: 8px; font-size: 14px; transition: border-color 0.2s;
+        }
+        .input-box input:focus { outline: none; border-color: #667eea; }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; border: none; padding: 14px 40px; border-radius: 8px;
+            font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 18px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102,126,234,0.4); }
+
+        /* Summary Cards */
+        .summary-cards {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px; margin-bottom: 24px;
+        }
+        .card {
+            background: white; border-radius: 15px; padding: 22px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+        }
+        .card h3 { color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .card .value { font-size: 1.6rem; font-weight: 700; color: #333; }
+        .card .sub { font-size: 12px; color: #999; margin-top: 4px; }
+
+        /* Status Badges */
+        .badge {
+            display: inline-block; padding: 5px 14px; border-radius: 20px;
+            font-size: 13px; font-weight: 600;
+        }
+        .badge-good { background: rgba(16,185,129,0.12); color: #059669; }
+        .badge-warn { background: rgba(245,158,11,0.12); color: #b45309; }
+        .badge-danger { background: rgba(239,68,68,0.12); color: #dc2626; }
+
+        /* Detail Table */
+        .detail-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+        .detail-table th, .detail-table td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+        .detail-table th { color: #888; font-weight: 600; background: #fafafa; }
+        .detail-table td:last-child { font-weight: 600; color: #333; }
+
+        /* Error */
+        .error-msg { background: rgba(239,68,68,0.08); color: #dc2626; padding: 12px 16px; border-radius: 8px; margin-top: 12px; display: none; font-size: 14px; }
+
+        /* Chart Controls */
+        .chart-controls {
+            display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
+            background: white; border-radius: 12px; padding: 14px 22px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+        .chart-controls label { font-weight: 600; color: #555; font-size: 14px; }
+        .toggle-wrap { display: flex; align-items: center; gap: 10px; }
+        .toggle-label { font-size: 14px; color: #667eea; font-weight: 600; }
+        .toggle-label.inactive { color: #aaa; }
+        .switch { position: relative; width: 48px; height: 26px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background: #667eea; border-radius: 26px; transition: 0.3s;
+        }
+        .slider:before {
+            content: ""; position: absolute; height: 20px; width: 20px;
+            left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s;
+        }
+        .switch input:checked + .slider { background: #764ba2; }
+        .switch input:checked + .slider:before { transform: translateX(22px); }
+
+        .chart-box {
+            background: white; border-radius: 15px; padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .chart-box h3 { color: #333; margin-bottom: 16px; }
+
+        .positive { color: #059669; }
+        .negative { color: #dc2626; }
+
+        #results-section { display: none; }
+        #no-data-msg { text-align: center; color: rgba(255,255,255,0.7); padding: 60px 20px; font-size: 1.1rem; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>Project Funding / Spending Calculator</h1>
+        <p>Analyse planned value, funding adequacy, utilisation, and predict project completion</p>
+    </div>
+
+    <div class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab('calculator')">Calculator</button>
+        <button class="tab-btn" onclick="switchTab('charts')">Charts</button>
+    </div>
+
+    <!-- ==================== TAB 1: CALCULATOR ==================== -->
+    <div id="tab-calculator" class="tab-content active">
+        <div class="panel">
+            <h2>Project Parameters</h2>
+            <div class="input-group">
+                <div class="input-box">
+                    <label>BAC (Budget at Completion)</label>
+                    <input type="number" id="bac" placeholder="e.g. 100000" min="0" step="1000">
+                </div>
+                <div class="input-box">
+                    <label>Plan Start</label>
+                    <input type="date" id="planStart">
+                </div>
+                <div class="input-box">
+                    <label>Plan Finish</label>
+                    <input type="date" id="planFinish">
+                </div>
+                <div class="input-box">
+                    <label>Data Date</label>
+                    <input type="date" id="dataDate">
+                </div>
+            </div>
+
+            <h2 style="margin-top:22px;">Spending Data</h2>
+            <div class="input-group">
+                <div class="input-box">
+                    <label>AC Previous (Prior Actual Cost)</label>
+                    <input type="number" id="acPrevious" placeholder="e.g. 30000" min="0" step="1000">
+                </div>
+                <div class="input-box">
+                    <label>Allocation (Current Period Budget)</label>
+                    <input type="number" id="allocation" placeholder="e.g. 20000" min="0" step="1000">
+                </div>
+                <div class="input-box">
+                    <label>Utilization (Current Period Spent)</label>
+                    <input type="number" id="utilization" placeholder="e.g. 15000" min="0" step="1000">
+                </div>
+            </div>
+
+            <button class="btn" onclick="calculate()">Calculate</button>
+            <div class="error-msg" id="errorMsg"></div>
+        </div>
+
+        <div id="results-section">
+            <!-- Row 1: PV & Balance -->
+            <div class="summary-cards">
+                <div class="card">
+                    <h3>Duration</h3>
+                    <div class="value" id="r-duration">-</div>
+                    <div class="sub" id="r-elapsed"></div>
+                </div>
+                <div class="card">
+                    <h3>PV (Linear)</h3>
+                    <div class="value" id="r-pvLinear">-</div>
+                    <div class="sub" id="r-pvLinearPct"></div>
+                </div>
+                <div class="card">
+                    <h3>PV (S-Curve)</h3>
+                    <div class="value" id="r-pvSCurve">-</div>
+                    <div class="sub" id="r-pvSCurvePct"></div>
+                </div>
+                <div class="card">
+                    <h3>Balance Remaining</h3>
+                    <div class="value" id="r-balance">-</div>
+                    <div class="sub" id="r-balancePct"></div>
+                </div>
+            </div>
+
+            <!-- Row 2: Rates & Status -->
+            <div class="summary-cards">
+                <div class="card">
+                    <h3>Current Spending Rate</h3>
+                    <div class="value" id="r-currentRate">-</div>
+                    <div class="sub">per day</div>
+                </div>
+                <div class="card">
+                    <h3>Required Spending Rate</h3>
+                    <div class="value" id="r-requiredRate">-</div>
+                    <div class="sub">per day</div>
+                </div>
+                <div class="card">
+                    <h3>Funding Status</h3>
+                    <div class="value" id="r-fundingStatus">-</div>
+                </div>
+                <div class="card">
+                    <h3>Utilization Status</h3>
+                    <div class="value" id="r-utilStatus">-</div>
+                </div>
+            </div>
+
+            <!-- Row 3: Prediction -->
+            <div class="summary-cards">
+                <div class="card">
+                    <h3>Feasibility</h3>
+                    <div class="value" id="r-feasibility">-</div>
+                    <div class="sub" id="r-feasibilitySub"></div>
+                </div>
+                <div class="card">
+                    <h3>Predicted Finish Date</h3>
+                    <div class="value" id="r-predictedFinish">-</div>
+                    <div class="sub" id="r-predictedDays"></div>
+                </div>
+                <div class="card">
+                    <h3>Plan Finish Date</h3>
+                    <div class="value" id="r-planFinish">-</div>
+                    <div class="sub" id="r-remainingTime"></div>
+                </div>
+                <div class="card">
+                    <h3>Schedule Outlook</h3>
+                    <div class="value" id="r-scheduleOutlook">-</div>
+                </div>
+            </div>
+
+            <!-- Detail Table -->
+            <div class="panel">
+                <h2>Detailed Breakdown</h2>
+                <table class="detail-table">
+                    <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+                    <tbody id="detailBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== TAB 2: CHARTS ==================== -->
+    <div id="tab-charts" class="tab-content">
+        <div id="no-data-msg">Run the calculator first to see the charts.</div>
+        <div id="chart-area" style="display:none;">
+            <div class="chart-controls">
+                <label>PV Curve Mode:</label>
+                <div class="toggle-wrap">
+                    <span class="toggle-label" id="lblLinear">Linear</span>
+                    <label class="switch">
+                        <input type="checkbox" id="pvToggle" checked onchange="togglePVMode()">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-label" id="lblSCurve">S-Curve</span>
+                </div>
+            </div>
+            <div class="chart-box">
+                <h3 id="chartTitle">Funding & Spending Curves (S-Curve)</h3>
+                <canvas id="mainChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ===================== STATE =====================
+    let chartInstance = null;
+    let calcResults = null;
+    let pvMode = 'scurve'; // 'linear' or 'scurve'
+
+    // ===================== UTILITIES =====================
+    function fmt(v) {
+        if (v == null || !isFinite(v)) return 'N/A';
+        return '$' + Math.round(v).toLocaleString();
+    }
+    function fmtDate(d) {
+        if (!d || isNaN(d.getTime())) return 'N/A';
+        return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    function fmtDays(d) {
+        if (!isFinite(d)) return 'N/A';
+        return Math.round(d) + ' days';
+    }
+    function fmtPct(v) {
+        if (!isFinite(v)) return '';
+        return (v * 100).toFixed(1) + '%';
+    }
+    function badgeHtml(text, type) {
+        return '<span class="badge badge-' + type + '">' + text + '</span>';
+    }
+
+    // ===================== TAB NAVIGATION =====================
+    function switchTab(name) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.getElementById('tab-' + name).classList.add('active');
+        document.querySelectorAll('.tab-btn').forEach(b => {
+            if ((name === 'calculator' && b.textContent === 'Calculator') ||
+                (name === 'charts' && b.textContent === 'Charts')) {
+                b.classList.add('active');
+            }
+        });
+        if (name === 'charts' && calcResults) {
+            document.getElementById('no-data-msg').style.display = 'none';
+            document.getElementById('chart-area').style.display = 'block';
+            renderChart();
+        }
+    }
+
+    // ===================== VALIDATION =====================
+    function showError(msg) {
+        const el = document.getElementById('errorMsg');
+        el.textContent = msg;
+        el.style.display = 'block';
+    }
+    function hideError() {
+        document.getElementById('errorMsg').style.display = 'none';
+    }
+
+    // ===================== CALCULATE =====================
+    function calculate() {
+        hideError();
+
+        const bac = parseFloat(document.getElementById('bac').value);
+        const planStart = new Date(document.getElementById('planStart').value);
+        const planFinish = new Date(document.getElementById('planFinish').value);
+        const dataDate = new Date(document.getElementById('dataDate').value);
+        const acPrevious = parseFloat(document.getElementById('acPrevious').value);
+        const allocation = parseFloat(document.getElementById('allocation').value);
+        const utilization = parseFloat(document.getElementById('utilization').value);
+
+        // Validate
+        if (isNaN(bac) || bac <= 0) { showError('BAC must be a positive number.'); return; }
+        if (isNaN(planStart.getTime())) { showError('Please enter a valid Plan Start date.'); return; }
+        if (isNaN(planFinish.getTime())) { showError('Please enter a valid Plan Finish date.'); return; }
+        if (isNaN(dataDate.getTime())) { showError('Please enter a valid Data Date.'); return; }
+        if (planFinish <= planStart) { showError('Plan Finish must be after Plan Start.'); return; }
+        if (dataDate < planStart) { showError('Data Date cannot be before Plan Start.'); return; }
+        if (isNaN(acPrevious) || acPrevious < 0) { showError('AC Previous must be >= 0.'); return; }
+        if (isNaN(allocation) || allocation < 0) { showError('Allocation must be >= 0.'); return; }
+        if (isNaN(utilization) || utilization < 0) { showError('Utilization must be >= 0.'); return; }
+
+        // Core calculations
+        const duration = (planFinish - planStart) / 86400000;
+        const elapsed = (dataDate - planStart) / 86400000;
+        const t = Math.max(0, Math.min(1, elapsed / duration));
+
+        const pvLinear = bac * t;
+        const pvSCurve = bac * (3 * t * t - 2 * t * t * t);
+
+        // Funding check — compare allocation against PV values
+        const fundingVsLinear = allocation >= pvLinear ? 'Adequate' : 'Under Funding';
+        const fundingVsSCurve = allocation >= pvSCurve ? 'Adequate' : 'Under Funding';
+
+        // Utilization check
+        let utilizationStatus;
+        const utilDiff = utilization - allocation;
+        if (Math.abs(utilDiff) < 0.01) utilizationStatus = 'On Target';
+        else if (utilization < allocation) utilizationStatus = 'Under Utilization';
+        else utilizationStatus = 'Over Utilization';
+
+        // Balance & rates
+        const totalSpent = acPrevious + utilization;
+        const balance = bac - acPrevious - utilization;
+        const remainingTime = (planFinish - dataDate) / 86400000;
+        const requiredRate = remainingTime > 0 ? balance / remainingTime : Infinity;
+        const currentRate = elapsed > 0 ? totalSpent / elapsed : 0;
+
+        // Feasibility (±15%)
+        let feasibility, feasibilityDetail;
+        if (currentRate === 0 && balance > 0) {
+            feasibility = 'Cannot Assess';
+            feasibilityDetail = 'No spending yet';
+        } else if (currentRate === 0 && balance <= 0) {
+            feasibility = 'N/A';
+            feasibilityDetail = 'Budget exhausted';
+        } else if (remainingTime <= 0) {
+            feasibility = 'Overdue';
+            feasibilityDetail = 'Project past finish date';
+        } else {
+            const ratio = requiredRate / currentRate;
+            if (ratio >= 0.85 && ratio <= 1.15) {
+                feasibility = 'Feasible';
+                feasibilityDetail = 'Required rate is within +/-15% of current (' + (ratio * 100).toFixed(0) + '%)';
+            } else if (ratio > 1.15) {
+                feasibility = 'Warning';
+                feasibilityDetail = 'Need to spend ' + (ratio * 100).toFixed(0) + '% of current rate (too fast)';
+            } else {
+                feasibility = 'Warning';
+                feasibilityDetail = 'Required rate is only ' + (ratio * 100).toFixed(0) + '% of current (can slow down)';
+            }
+        }
+
+        // Predicted finish
+        let predictedFinish = null;
+        let predictedDaysRemaining = null;
+        if (currentRate > 0 && balance > 0) {
+            predictedDaysRemaining = balance / currentRate;
+            predictedFinish = new Date(dataDate.getTime() + predictedDaysRemaining * 86400000);
+        } else if (balance <= 0) {
+            predictedFinish = dataDate;
+            predictedDaysRemaining = 0;
+        }
+
+        // Schedule outlook
+        let scheduleOutlook;
+        if (predictedFinish && predictedFinish <= planFinish) {
+            scheduleOutlook = 'On Track / Early';
+        } else if (predictedFinish && predictedFinish > planFinish) {
+            const delayDays = (predictedFinish - planFinish) / 86400000;
+            scheduleOutlook = 'Late by ~' + Math.round(delayDays) + ' days';
+        } else {
+            scheduleOutlook = 'N/A';
+        }
+
+        calcResults = {
+            bac, planStart, planFinish, dataDate,
+            acPrevious, allocation, utilization,
+            duration, elapsed, t,
+            pvLinear, pvSCurve,
+            fundingVsLinear, fundingVsSCurve,
+            utilizationStatus, totalSpent, balance,
+            remainingTime, requiredRate, currentRate,
+            feasibility, feasibilityDetail,
+            predictedFinish, predictedDaysRemaining,
+            scheduleOutlook
+        };
+
+        renderResults(calcResults);
+    }
+
+    // ===================== RENDER RESULTS =====================
+    function renderResults(r) {
+        document.getElementById('results-section').style.display = 'block';
+
+        // Row 1
+        document.getElementById('r-duration').textContent = fmtDays(r.duration);
+        document.getElementById('r-elapsed').textContent = 'Elapsed: ' + fmtDays(r.elapsed) + ' (' + fmtPct(r.t) + ')';
+
+        document.getElementById('r-pvLinear').textContent = fmt(r.pvLinear);
+        document.getElementById('r-pvLinearPct').textContent = fmtPct(r.pvLinear / r.bac) + ' of BAC';
+
+        document.getElementById('r-pvSCurve').textContent = fmt(r.pvSCurve);
+        document.getElementById('r-pvSCurvePct').textContent = fmtPct(r.pvSCurve / r.bac) + ' of BAC';
+
+        const balEl = document.getElementById('r-balance');
+        balEl.textContent = fmt(r.balance);
+        balEl.className = r.balance <= 0 ? 'value negative' : 'value';
+        document.getElementById('r-balancePct').textContent = fmtPct(r.balance / r.bac) + ' of BAC';
+
+        // Row 2
+        document.getElementById('r-currentRate').textContent = fmt(r.currentRate);
+        document.getElementById('r-requiredRate').textContent = fmt(r.requiredRate);
+
+        // Funding status — show worst of linear and s-curve
+        const fundingBad = (r.fundingVsLinear === 'Under Funding' || r.fundingVsSCurve === 'Under Funding');
+        document.getElementById('r-fundingStatus').innerHTML = fundingBad
+            ? badgeHtml('Under Funding', 'danger')
+            : badgeHtml('Adequate', 'good');
+
+        const utilType = r.utilizationStatus === 'On Target' ? 'good'
+            : r.utilizationStatus === 'Under Utilization' ? 'warn' : 'danger';
+        document.getElementById('r-utilStatus').innerHTML = badgeHtml(r.utilizationStatus, utilType);
+
+        // Row 3
+        const feasType = r.feasibility === 'Feasible' ? 'good'
+            : r.feasibility === 'Overdue' ? 'danger' : 'warn';
+        document.getElementById('r-feasibility').innerHTML = badgeHtml(r.feasibility, feasType);
+        document.getElementById('r-feasibilitySub').textContent = r.feasibilityDetail;
+
+        document.getElementById('r-predictedFinish').textContent = fmtDate(r.predictedFinish);
+        document.getElementById('r-predictedDays').textContent = r.predictedDaysRemaining != null
+            ? fmtDays(r.predictedDaysRemaining) + ' from data date' : '';
+
+        document.getElementById('r-planFinish').textContent = fmtDate(r.planFinish);
+        document.getElementById('r-remainingTime').textContent = fmtDays(r.remainingTime) + ' remaining';
+
+        const outType = r.scheduleOutlook.includes('Late') ? 'danger'
+            : r.scheduleOutlook === 'N/A' ? 'warn' : 'good';
+        document.getElementById('r-scheduleOutlook').innerHTML = badgeHtml(r.scheduleOutlook, outType);
+
+        // Detail table
+        const rows = [
+            ['BAC', fmt(r.bac)],
+            ['Plan Start', fmtDate(r.planStart)],
+            ['Plan Finish', fmtDate(r.planFinish)],
+            ['Data Date', fmtDate(r.dataDate)],
+            ['Duration', fmtDays(r.duration)],
+            ['Elapsed', fmtDays(r.elapsed)],
+            ['Progress (t)', fmtPct(r.t)],
+            ['PV (Linear)', fmt(r.pvLinear)],
+            ['PV (S-Curve: 3t\u00B2 - 2t\u00B3)', fmt(r.pvSCurve)],
+            ['AC Previous', fmt(r.acPrevious)],
+            ['Allocation', fmt(r.allocation)],
+            ['Utilization', fmt(r.utilization)],
+            ['Total Spent (AC_Prev + Util)', fmt(r.totalSpent)],
+            ['Funding vs PV Linear', r.fundingVsLinear],
+            ['Funding vs PV S-Curve', r.fundingVsSCurve],
+            ['Utilization Status', r.utilizationStatus],
+            ['Balance (BAC - AC_Prev - Util)', fmt(r.balance)],
+            ['Remaining Time', fmtDays(r.remainingTime)],
+            ['Current Spending Rate', fmt(r.currentRate) + ' / day'],
+            ['Required Spending Rate', fmt(r.requiredRate) + ' / day'],
+            ['Feasibility', r.feasibility + ' \u2014 ' + r.feasibilityDetail],
+            ['Predicted Finish', fmtDate(r.predictedFinish)],
+            ['Schedule Outlook', r.scheduleOutlook],
+        ];
+        const tbody = document.getElementById('detailBody');
+        tbody.innerHTML = rows.map(([label, val]) =>
+            '<tr><td>' + label + '</td><td>' + val + '</td></tr>'
+        ).join('');
+    }
+
+    // ===================== CHART =====================
+    function togglePVMode() {
+        const checked = document.getElementById('pvToggle').checked;
+        pvMode = checked ? 'scurve' : 'linear';
+        document.getElementById('lblLinear').className = 'toggle-label' + (pvMode === 'linear' ? '' : ' inactive');
+        document.getElementById('lblSCurve').className = 'toggle-label' + (pvMode === 'scurve' ? '' : ' inactive');
+        document.getElementById('chartTitle').textContent = 'Funding & Spending Curves (' + (pvMode === 'scurve' ? 'S-Curve' : 'Linear') + ')';
+        renderChart();
+    }
+
+    function renderChart() {
+        if (!calcResults) return;
+        const r = calcResults;
+
+        if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        const N = 100;
+        const pvLabels = [];
+        const pvData = [];
+
+        for (let i = 0; i <= N; i++) {
+            const ti = i / N;
+            const day = Math.round(ti * r.duration);
+            pvLabels.push(day);
+            pvData.push(pvMode === 'linear'
+                ? r.bac * ti
+                : r.bac * (3 * ti * ti - 2 * ti * ti * ti));
+        }
+
+        // AC cumulative line (linear from 0 to totalSpent over elapsed days)
+        const elapsedDay = Math.round(r.elapsed);
+        const acData = pvLabels.map(day => {
+            if (r.elapsed <= 0) return day === 0 ? 0 : null;
+            if (day <= elapsedDay) return r.totalSpent * (day / r.elapsed);
+            return null;
+        });
+
+        // Allocation & Utilization as single points at data date (cumulative context)
+        const allocData = pvLabels.map(day => day === elapsedDay ? r.acPrevious + r.allocation : null);
+        const utilData = pvLabels.map(day => day === elapsedDay ? r.totalSpent : null);
+
+        chartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: pvLabels,
+                datasets: [
+                    {
+                        label: pvMode === 'linear' ? 'PV (Linear)' : 'PV (S-Curve)',
+                        data: pvData,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102,126,234,0.08)',
+                        borderWidth: 3, fill: true, pointRadius: 0, tension: 0.4
+                    },
+                    {
+                        label: 'AC (Cumulative)',
+                        data: acData,
+                        borderColor: '#ef4444',
+                        borderWidth: 2, pointRadius: 0, spanGaps: false, fill: false
+                    },
+                    {
+                        label: 'Allocation (Cumul.)',
+                        data: allocData,
+                        borderColor: '#f59e0b', backgroundColor: '#f59e0b',
+                        pointRadius: 8, pointStyle: 'triangle', showLine: false
+                    },
+                    {
+                        label: 'Utilization (Cumul.)',
+                        data: utilData,
+                        borderColor: '#10b981', backgroundColor: '#10b981',
+                        pointRadius: 8, pointStyle: 'rectRot', showLine: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Days from Start', font: { weight: 'bold' } },
+                        ticks: { maxTicksLimit: 15 }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Cost ($)', font: { weight: 'bold' } },
+                        ticks: { callback: v => '$' + v.toLocaleString() }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ctx.dataset.label + ': $' + Math.round(ctx.parsed.y).toLocaleString()
+                        }
+                    },
+                    annotation: {
+                        annotations: {
+                            dataDateLine: {
+                                type: 'line', xMin: elapsedDay, xMax: elapsedDay,
+                                borderColor: 'rgba(107,114,128,0.7)', borderWidth: 2, borderDash: [6, 4],
+                                label: { display: true, content: 'Data Date (Day ' + elapsedDay + ')', position: 'start', font: { size: 11 } }
+                            },
+                            bacLine: {
+                                type: 'line', yMin: r.bac, yMax: r.bac,
+                                borderColor: 'rgba(139,92,246,0.5)', borderWidth: 1.5, borderDash: [4, 4],
+                                label: { display: true, content: 'BAC: $' + r.bac.toLocaleString(), position: 'end', font: { size: 11 } }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Initialize toggle labels
+    document.getElementById('lblLinear').className = 'toggle-label inactive';
+</script>
+</body>
+</html>

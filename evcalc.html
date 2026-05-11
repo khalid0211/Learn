@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Earned Value Calculator</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 0.25rem;
+      color: #f8fafc;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 0.85rem;
+      color: #64748b;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── Tabs ── */
+    .tab-nav {
+      display: flex;
+      max-width: 960px;
+      margin: 0 auto 1.5rem;
+      background: #1e2130;
+      border: 1px solid #2d3148;
+      border-radius: 10px;
+      padding: 4px;
+      gap: 4px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 0.55rem 1rem;
+      background: transparent;
+      border: none;
+      border-radius: 7px;
+      color: #64748b;
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .tab-btn:hover { color: #94a3b8; }
+
+    .tab-btn.active {
+      background: #0f1117;
+      color: #e2e8f0;
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ── Layout ── */
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 680px) {
+      .container { grid-template-columns: 1fr; }
+    }
+
+    .full-width { grid-column: 1 / -1; }
+
+    /* ── Card ── */
+    .card {
+      background: #1e2130;
+      border: 1px solid #2d3148;
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .card h2 {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #64748b;
+      margin-bottom: 1.2rem;
+    }
+
+    /* ── Inputs ── */
+    .input-group { margin-bottom: 1rem; }
+
+    .input-group label {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 0.88rem;
+      color: #94a3b8;
+      margin-bottom: 0.4rem;
+    }
+
+    .input-group label span {
+      font-size: 0.75rem;
+      color: #475569;
+    }
+
+    .input-wrap { position: relative; }
+
+    .input-wrap.currency::before {
+      content: '$';
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #475569;
+      font-size: 0.9rem;
+      pointer-events: none;
+    }
+
+    input[type="number"],
+    input[type="date"] {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.15s;
+      -moz-appearance: textfield;
+    }
+
+    .input-wrap.currency input[type="number"] {
+      padding-left: 1.6rem;
+    }
+
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    input[type="number"]:focus,
+    input[type="date"]:focus { border-color: #6366f1; }
+
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(0.5);
+      cursor: pointer;
+    }
+
+    /* ── Metrics grid ── */
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .metric {
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+    }
+
+    .metric.positive { border-left: 3px solid #22c55e; }
+    .metric.negative { border-left: 3px solid #ef4444; }
+    .metric.neutral  { border-left: 3px solid #6366f1; }
+    .metric.warning  { border-left: 3px solid #f59e0b; }
+
+    .metric-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #64748b;
+      margin-bottom: 0.3rem;
+    }
+
+    .metric-full {
+      font-size: 0.7rem;
+      color: #475569;
+      margin-bottom: 0.5rem;
+    }
+
+    .metric-value {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      letter-spacing: -0.5px;
+    }
+
+    .metric-value.good { color: #22c55e; }
+    .metric-value.bad  { color: #ef4444; }
+    .metric-value.warn { color: #f59e0b; }
+
+    .metric-formula {
+      font-size: 0.68rem;
+      color: #334155;
+      margin-top: 0.35rem;
+    }
+
+    /* ── Status pills ── */
+    .status-bar {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .status-pill {
+      flex: 1;
+      min-width: 120px;
+      background: #1e2130;
+      border: 1px solid #2d3148;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      text-align: center;
+    }
+
+    .status-pill .pill-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #64748b;
+      margin-bottom: 0.25rem;
+    }
+
+    .status-pill .pill-value {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .pill-value.good { color: #22c55e; }
+    .pill-value.bad  { color: #ef4444; }
+    .pill-value.warn { color: #f59e0b; }
+
+    /* ── Progress bars ── */
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      color: #64748b;
+      margin-bottom: 0.4rem;
+    }
+
+    .progress-track {
+      background: #0f1117;
+      border-radius: 999px;
+      height: 8px;
+      margin-bottom: 0.6rem;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.3s ease;
+    }
+
+    .bar-pv { background: #6366f1; }
+    .bar-ev { background: #22c55e; }
+    .bar-ac { background: #f59e0b; }
+
+    .legend {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      font-size: 0.75rem;
+      color: #64748b;
+    }
+
+    .legend-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+
+    /* ── Buttons ── */
+    .reset-btn, .add-btn {
+      display: block;
+      width: 100%;
+      margin-top: 1.2rem;
+      padding: 0.6rem;
+      background: #1e2130;
+      border: 1px solid #2d3148;
+      border-radius: 8px;
+      color: #64748b;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .reset-btn:hover, .add-btn:hover {
+      border-color: #6366f1;
+      color: #a5b4fc;
+    }
+
+    /* ── S-Curve date row ── */
+    .dates-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1rem;
+    }
+
+    @media (max-width: 580px) {
+      .dates-row { grid-template-columns: 1fr; }
+    }
+
+    /* ── Period table ── */
+    .period-table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    thead th {
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #64748b;
+      border-bottom: 1px solid #2d3148;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid #1a1f32;
+    }
+
+    tbody tr:last-child { border-bottom: none; }
+
+    tbody td {
+      padding: 0.4rem 0.5rem;
+    }
+
+    tbody td input {
+      width: 100%;
+      padding: 0.45rem 0.6rem;
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 6px;
+      color: #e2e8f0;
+      font-size: 0.85rem;
+      outline: none;
+      min-width: 90px;
+    }
+
+    tbody td input:focus { border-color: #6366f1; }
+    tbody td input[type="date"] { min-width: 130px; }
+
+    .remove-btn {
+      background: none;
+      border: 1px solid #2d3148;
+      border-radius: 6px;
+      color: #475569;
+      font-size: 0.85rem;
+      padding: 0.3rem 0.6rem;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+
+    .remove-btn:hover {
+      border-color: #ef4444;
+      color: #ef4444;
+    }
+
+    .empty-table {
+      text-align: center;
+      padding: 1.5rem;
+      color: #334155;
+      font-size: 0.82rem;
+    }
+
+    /* ── Chart ── */
+    .chart-wrap {
+      position: relative;
+      height: 420px;
+    }
+
+    .chart-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #334155;
+      font-size: 0.85rem;
+      border: 1px dashed #2d3148;
+      border-radius: 8px;
+    }
+
+    /* ── Info strip ── */
+    .info-strip {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-top: 1rem;
+    }
+
+    .info-item {
+      background: #0f1117;
+      border: 1px solid #2d3148;
+      border-radius: 8px;
+      padding: 0.6rem 0.9rem;
+      font-size: 0.8rem;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .info-dot {
+      width: 10px;
+      height: 3px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Earned Value Calculator</h1>
+<p class="subtitle">Project performance measurement using EVM methodology</p>
+
+<!-- Tab navigation -->
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('calc', this)">EV Calculator</button>
+  <button class="tab-btn" onclick="switchTab('scurve', this)">S-Curves</button>
+</div>
+
+<!-- ══════════ TAB 1: EV Calculator ══════════ -->
+<div id="tab-calc" class="tab-content active">
+  <div class="container">
+
+    <div class="card">
+      <h2>Inputs</h2>
+
+      <div class="input-group">
+        <label>Budget at Completion (BAC) <span>Total planned budget</span></label>
+        <div class="input-wrap currency">
+          <input type="number" id="bac" placeholder="100000" min="0" step="any">
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>Planned Value (PV) <span>Budgeted work scheduled</span></label>
+        <div class="input-wrap currency">
+          <input type="number" id="pv" placeholder="60000" min="0" step="any">
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>Earned Value (EV) <span>Budgeted value of work done</span></label>
+        <div class="input-wrap currency">
+          <input type="number" id="ev" placeholder="50000" min="0" step="any">
+        </div>
+      </div>
+
+      <div class="input-group">
+        <label>Actual Cost (AC) <span>Actual cost incurred</span></label>
+        <div class="input-wrap currency">
+          <input type="number" id="ac" placeholder="55000" min="0" step="any">
+        </div>
+      </div>
+
+      <button class="reset-btn" onclick="resetAll()">Reset all fields</button>
+    </div>
+
+    <div class="card">
+      <h2>Status Summary</h2>
+      <div class="status-bar">
+        <div class="status-pill">
+          <div class="pill-label">Schedule</div>
+          <div class="pill-value" id="status-schedule">—</div>
+        </div>
+        <div class="status-pill">
+          <div class="pill-label">Cost</div>
+          <div class="pill-value" id="status-cost">—</div>
+        </div>
+        <div class="status-pill">
+          <div class="pill-label">% Complete</div>
+          <div class="pill-value" id="status-pct">—</div>
+        </div>
+      </div>
+
+      <div class="progress-label"><span>PV — Planned Value</span><span id="lbl-pv">$0</span></div>
+      <div class="progress-track"><div class="progress-bar bar-pv" id="bar-pv" style="width:0%"></div></div>
+
+      <div class="progress-label"><span>EV — Earned Value</span><span id="lbl-ev">$0</span></div>
+      <div class="progress-track"><div class="progress-bar bar-ev" id="bar-ev" style="width:0%"></div></div>
+
+      <div class="progress-label"><span>AC — Actual Cost</span><span id="lbl-ac">$0</span></div>
+      <div class="progress-track"><div class="progress-bar bar-ac" id="bar-ac" style="width:0%"></div></div>
+
+      <div class="legend">
+        <span><span class="legend-dot" style="background:#6366f1"></span>PV</span>
+        <span><span class="legend-dot" style="background:#22c55e"></span>EV</span>
+        <span><span class="legend-dot" style="background:#f59e0b"></span>AC</span>
+      </div>
+    </div>
+
+    <div class="card full-width">
+      <h2>Performance Metrics</h2>
+      <div class="results-grid">
+
+        <div class="metric neutral" id="card-cv">
+          <div class="metric-label">CV</div>
+          <div class="metric-full">Cost Variance</div>
+          <div class="metric-value" id="val-cv">—</div>
+          <div class="metric-formula">EV − AC</div>
+        </div>
+
+        <div class="metric neutral" id="card-sv">
+          <div class="metric-label">SV</div>
+          <div class="metric-full">Schedule Variance</div>
+          <div class="metric-value" id="val-sv">—</div>
+          <div class="metric-formula">EV − PV</div>
+        </div>
+
+        <div class="metric neutral" id="card-cpi">
+          <div class="metric-label">CPI</div>
+          <div class="metric-full">Cost Performance Index</div>
+          <div class="metric-value" id="val-cpi">—</div>
+          <div class="metric-formula">EV ÷ AC</div>
+        </div>
+
+        <div class="metric neutral" id="card-spi">
+          <div class="metric-label">SPI</div>
+          <div class="metric-full">Schedule Performance Index</div>
+          <div class="metric-value" id="val-spi">—</div>
+          <div class="metric-formula">EV ÷ PV</div>
+        </div>
+
+        <div class="metric neutral" id="card-eac">
+          <div class="metric-label">EAC</div>
+          <div class="metric-full">Estimate at Completion</div>
+          <div class="metric-value" id="val-eac">—</div>
+          <div class="metric-formula">BAC ÷ CPI</div>
+        </div>
+
+        <div class="metric neutral" id="card-etc">
+          <div class="metric-label">ETC</div>
+          <div class="metric-full">Estimate to Complete</div>
+          <div class="metric-value" id="val-etc">—</div>
+          <div class="metric-formula">EAC − AC</div>
+        </div>
+
+        <div class="metric neutral" id="card-vac">
+          <div class="metric-label">VAC</div>
+          <div class="metric-full">Variance at Completion</div>
+          <div class="metric-value" id="val-vac">—</div>
+          <div class="metric-formula">BAC − EAC</div>
+        </div>
+
+        <div class="metric neutral" id="card-tcpi">
+          <div class="metric-label">TCPI</div>
+          <div class="metric-full">To-Complete Performance Index</div>
+          <div class="metric-value" id="val-tcpi">—</div>
+          <div class="metric-formula">(BAC − EV) ÷ (BAC − AC)</div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════ TAB 2: S-Curves ══════════ -->
+<div id="tab-scurve" class="tab-content">
+  <div class="container">
+
+    <!-- Project Dates -->
+    <div class="card full-width">
+      <h2>Project Dates</h2>
+      <div class="dates-row">
+        <div class="input-group" style="margin-bottom:0">
+          <label>Start Date</label>
+          <div class="input-wrap">
+            <input type="date" id="sc-start">
+          </div>
+        </div>
+        <div class="input-group" style="margin-bottom:0">
+          <label>Data Date <span>Status as of</span></label>
+          <div class="input-wrap">
+            <input type="date" id="sc-datadate">
+          </div>
+        </div>
+        <div class="input-group" style="margin-bottom:0">
+          <label>Finish Date <span>Planned completion</span></label>
+          <div class="input-wrap">
+            <input type="date" id="sc-finish">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Entry -->
+    <div class="card full-width">
+      <h2>Cumulative Period Data</h2>
+      <div class="period-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Period Date</th>
+              <th>Cum. PV ($)</th>
+              <th>Cum. EV ($)</th>
+              <th>Cum. AC ($)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="period-tbody">
+            <!-- rows added dynamically -->
+          </tbody>
+        </table>
+        <div id="table-empty" class="empty-table">No periods added yet — click Add Period below</div>
+      </div>
+      <button class="add-btn" onclick="addPeriodRow()">+ Add Period</button>
+    </div>
+
+    <!-- Chart -->
+    <div class="card full-width">
+      <h2>S-Curve Chart</h2>
+      <div class="chart-wrap">
+        <div class="chart-empty" id="chart-empty">Add period data above to render S-curves</div>
+        <canvas id="scurve-canvas" style="display:none"></canvas>
+      </div>
+      <div class="info-strip">
+        <div class="info-item">
+          <span class="info-dot" style="background:#6366f1"></span>PV — Planned Value baseline
+        </div>
+        <div class="info-item">
+          <span class="info-dot" style="background:#22c55e"></span>EV — Earned Value (actual progress)
+        </div>
+        <div class="info-item">
+          <span class="info-dot" style="background:#f59e0b"></span>AC — Actual Cost incurred
+        </div>
+        <div class="info-item">
+          <span class="info-dot" style="background:#ffffff; opacity:0.4"></span>Data Date (vertical)
+        </div>
+        <div class="info-item">
+          <span class="info-dot" style="background:#94a3b8; opacity:0.4"></span>BAC (horizontal)
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // ── Tab switching ─────────────────────────────
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    btn.classList.add('active');
+    if (name === 'scurve') renderChart();
+  }
+
+  // ── EV Calculator ─────────────────────────────
+  const calcIds = ['bac','pv','ev','ac'];
+  calcIds.forEach(id => document.getElementById(id).addEventListener('input', calculate));
+
+  function fmt(n, isCurrency = true) {
+    if (!isFinite(n)) return 'N/A';
+    if (isCurrency) {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+    }
+    return n.toFixed(2);
+  }
+
+  function val(id) { return parseFloat(document.getElementById(id).value) || 0; }
+
+  function setMetric(id, value, isCurrency) {
+    const el   = document.getElementById('val-' + id);
+    const card = document.getElementById('card-' + id);
+    el.textContent = isCurrency ? fmt(value) : fmt(value, false);
+    card.classList.remove('positive','negative','neutral','warning');
+    el.classList.remove('good','bad','warn');
+    if (!isFinite(value)) { card.classList.add('neutral'); return; }
+    if (value > 0) { card.classList.add('positive'); el.classList.add('good'); }
+    else if (value < 0) { card.classList.add('negative'); el.classList.add('bad'); }
+    else { card.classList.add('neutral'); }
+  }
+
+  function setIndexMetric(id, value) {
+    const el   = document.getElementById('val-' + id);
+    const card = document.getElementById('card-' + id);
+    el.textContent = isFinite(value) ? fmt(value, false) : 'N/A';
+    card.classList.remove('positive','negative','neutral','warning');
+    el.classList.remove('good','bad','warn');
+    if (!isFinite(value)) { card.classList.add('neutral'); return; }
+    if (value >= 1.0)       { card.classList.add('positive'); el.classList.add('good'); }
+    else if (value >= 0.9)  { card.classList.add('warning');  el.classList.add('warn'); }
+    else                     { card.classList.add('negative'); el.classList.add('bad');  }
+  }
+
+  function calculate() {
+    const bac = val('bac'), pv = val('pv'), ev = val('ev'), ac = val('ac');
+
+    const cv   = ev - ac;
+    const sv   = ev - pv;
+    const cpi  = ac !== 0 ? ev / ac : NaN;
+    const spi  = pv !== 0 ? ev / pv : NaN;
+    const eac  = isFinite(cpi) && cpi !== 0 ? bac / cpi : NaN;
+    const etc  = isFinite(eac) ? eac - ac : NaN;
+    const vac  = isFinite(eac) ? bac - eac : NaN;
+    const tcpi = (bac - ac) !== 0 ? (bac - ev) / (bac - ac) : NaN;
+
+    setMetric('cv', cv, true);
+    setMetric('sv', sv, true);
+    setIndexMetric('cpi', cpi);
+    setIndexMetric('spi', spi);
+
+    // EAC
+    const eacEl = document.getElementById('val-eac');
+    const eacCard = document.getElementById('card-eac');
+    eacEl.textContent = isFinite(eac) ? fmt(eac) : '—';
+    eacCard.classList.remove('positive','negative','neutral','warning');
+    eacEl.classList.remove('good','bad','warn');
+    if (isFinite(eac)) {
+      if (eac <= bac) { eacCard.classList.add('positive'); eacEl.classList.add('good'); }
+      else            { eacCard.classList.add('negative'); eacEl.classList.add('bad'); }
+    } else { eacCard.classList.add('neutral'); }
+
+    // ETC
+    document.getElementById('val-etc').textContent = isFinite(etc) ? fmt(etc) : '—';
+    document.getElementById('card-etc').className = 'metric neutral';
+
+    // VAC
+    setMetric('vac', isFinite(vac) ? vac : NaN, true);
+
+    // TCPI
+    const tcpiEl = document.getElementById('val-tcpi');
+    const tcpiCard = document.getElementById('card-tcpi');
+    tcpiEl.textContent = isFinite(tcpi) ? fmt(tcpi, false) : '—';
+    tcpiCard.classList.remove('positive','negative','neutral','warning');
+    tcpiEl.classList.remove('good','bad','warn');
+    if (isFinite(tcpi)) {
+      if (tcpi <= 1.0)      { tcpiCard.classList.add('positive'); tcpiEl.classList.add('good'); }
+      else if (tcpi <= 1.1) { tcpiCard.classList.add('warning');  tcpiEl.classList.add('warn'); }
+      else                   { tcpiCard.classList.add('negative'); tcpiEl.classList.add('bad'); }
+    } else { tcpiCard.classList.add('neutral'); }
+
+    // Status pills
+    const schedEl = document.getElementById('status-schedule');
+    schedEl.className = 'pill-value';
+    if (!pv)          { schedEl.textContent = '—'; }
+    else if (sv > 0)  { schedEl.textContent = 'Ahead';   schedEl.classList.add('good'); }
+    else if (sv === 0){ schedEl.textContent = 'On Time'; }
+    else               { schedEl.textContent = 'Behind';  schedEl.classList.add('bad'); }
+
+    const costEl = document.getElementById('status-cost');
+    costEl.className = 'pill-value';
+    if (!ac)          { costEl.textContent = '—'; }
+    else if (cv > 0)  { costEl.textContent = 'Under Budget'; costEl.classList.add('good'); }
+    else if (cv === 0){ costEl.textContent = 'On Budget'; }
+    else               { costEl.textContent = 'Over Budget'; costEl.classList.add('bad'); }
+
+    const pctEl = document.getElementById('status-pct');
+    pctEl.className = 'pill-value';
+    pctEl.textContent = bac > 0 ? (ev / bac * 100).toFixed(1) + '%' : '—';
+
+    // Progress bars
+    const max = Math.max(bac, pv, ev, ac, 1);
+    document.getElementById('bar-pv').style.width = (pv / max * 100) + '%';
+    document.getElementById('bar-ev').style.width = (ev / max * 100) + '%';
+    document.getElementById('bar-ac').style.width = (ac / max * 100) + '%';
+    document.getElementById('lbl-pv').textContent = fmt(pv);
+    document.getElementById('lbl-ev').textContent = fmt(ev);
+    document.getElementById('lbl-ac').textContent = fmt(ac);
+  }
+
+  function resetAll() {
+    calcIds.forEach(id => document.getElementById(id).value = '');
+    calculate();
+    ['cv','sv','cpi','spi','eac','etc','vac','tcpi'].forEach(id => {
+      document.getElementById('val-' + id).textContent = '—';
+      document.getElementById('card-' + id).className = 'metric neutral';
+      document.getElementById('val-' + id).className = 'metric-value';
+    });
+    ['status-schedule','status-cost','status-pct'].forEach(id => {
+      document.getElementById(id).textContent = '—';
+      document.getElementById(id).className = 'pill-value';
+    });
+  }
+
+  // ── S-Curves ──────────────────────────────────
+  let scurveChart = null;
+  let rowId = 0;
+
+  // Listen to date changes
+  ['sc-start','sc-datadate','sc-finish'].forEach(id =>
+    document.getElementById(id).addEventListener('change', renderChart)
+  );
+
+  function addPeriodRow(dateVal, pvVal, evVal, acVal) {
+    const tbody = document.getElementById('period-tbody');
+    document.getElementById('table-empty').style.display = 'none';
+
+    const rid = ++rowId;
+    const tr = document.createElement('tr');
+    tr.id = 'row-' + rid;
+    tr.innerHTML = `
+      <td><input type="date" value="${dateVal||''}" onchange="renderChart()"></td>
+      <td><input type="number" placeholder="0" min="0" step="any" value="${pvVal||''}" oninput="renderChart()"></td>
+      <td><input type="number" placeholder="0" min="0" step="any" value="${evVal||''}" oninput="renderChart()"></td>
+      <td><input type="number" placeholder="0" min="0" step="any" value="${acVal||''}" oninput="renderChart()"></td>
+      <td><button class="remove-btn" onclick="removeRow(${rid})">Remove</button></td>
+    `;
+    tbody.appendChild(tr);
+    renderChart();
+  }
+
+  function removeRow(rid) {
+    const row = document.getElementById('row-' + rid);
+    if (row) row.remove();
+    if (document.querySelectorAll('#period-tbody tr').length === 0) {
+      document.getElementById('table-empty').style.display = 'block';
+    }
+    renderChart();
+  }
+
+  function renderChart() {
+    const startDate   = document.getElementById('sc-start').value;
+    const finishDate  = document.getElementById('sc-finish').value;
+    const dataDate    = document.getElementById('sc-datadate').value;
+    const bac         = parseFloat(document.getElementById('bac').value) || null;
+
+    const rows = document.querySelectorAll('#period-tbody tr');
+
+    // Collect data from table rows
+    const pvPoints = [], evPoints = [], acPoints = [];
+
+    rows.forEach(row => {
+      const inputs = row.querySelectorAll('input');
+      const d  = inputs[0].value;
+      const pv = parseFloat(inputs[1].value);
+      const ev = parseFloat(inputs[2].value);
+      const ac = parseFloat(inputs[3].value);
+      if (!d) return;
+      if (!isNaN(pv)) pvPoints.push({ x: d, y: pv });
+      if (!isNaN(ev)) evPoints.push({ x: d, y: ev });
+      if (!isNaN(ac)) acPoints.push({ x: d, y: ac });
+    });
+
+    // Anchor all curves at (start, 0) if start date provided
+    const sortByDate = arr => arr.sort((a, b) => new Date(a.x) - new Date(b.x));
+
+    if (startDate) {
+      if (!pvPoints.find(p => p.x === startDate)) pvPoints.unshift({ x: startDate, y: 0 });
+      if (!evPoints.find(p => p.x === startDate)) evPoints.unshift({ x: startDate, y: 0 });
+      if (!acPoints.find(p => p.x === startDate)) acPoints.unshift({ x: startDate, y: 0 });
+    }
+
+    // Anchor PV at (finish, BAC)
+    if (finishDate && bac) {
+      if (!pvPoints.find(p => p.x === finishDate)) pvPoints.push({ x: finishDate, y: bac });
+    }
+
+    sortByDate(pvPoints);
+    sortByDate(evPoints);
+    sortByDate(acPoints);
+
+    const hasData = pvPoints.length > 1 || evPoints.length > 1 || acPoints.length > 1;
+    const canvas  = document.getElementById('scurve-canvas');
+    const empty   = document.getElementById('chart-empty');
+
+    if (!hasData) {
+      canvas.style.display = 'none';
+      empty.style.display  = 'flex';
+      if (scurveChart) { scurveChart.destroy(); scurveChart = null; }
+      return;
+    }
+
+    canvas.style.display = 'block';
+    empty.style.display  = 'none';
+
+    // Build annotations
+    const annotations = {};
+
+    if (dataDate) {
+      annotations.dataDateLine = {
+        type: 'line',
+        xMin: dataDate,
+        xMax: dataDate,
+        borderColor: 'rgba(255,255,255,0.25)',
+        borderWidth: 2,
+        borderDash: [6, 4],
+        label: {
+          display: true,
+          content: 'Data Date',
+          position: 'start',
+          color: '#94a3b8',
+          backgroundColor: 'transparent',
+          font: { size: 11, weight: '600' },
+          yAdjust: 8
+        }
+      };
+    }
+
+    if (bac) {
+      annotations.bacLine = {
+        type: 'line',
+        yMin: bac,
+        yMax: bac,
+        borderColor: 'rgba(255,255,255,0.12)',
+        borderWidth: 1.5,
+        borderDash: [4, 6],
+        label: {
+          display: true,
+          content: 'BAC ' + fmt(bac),
+          position: 'end',
+          color: '#475569',
+          backgroundColor: 'transparent',
+          font: { size: 10 },
+          xAdjust: -6
+        }
+      };
+    }
+
+    if (scurveChart) { scurveChart.destroy(); scurveChart = null; }
+
+    const ctx = canvas.getContext('2d');
+    scurveChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        datasets: [
+          {
+            label: 'PV — Planned Value',
+            data: pvPoints,
+            borderColor: '#6366f1',
+            backgroundColor: 'rgba(99,102,241,0.08)',
+            borderWidth: 2.5,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointBackgroundColor: '#6366f1',
+            tension: 0.4,
+            fill: false,
+            parsing: false
+          },
+          {
+            label: 'EV — Earned Value',
+            data: evPoints,
+            borderColor: '#22c55e',
+            backgroundColor: 'rgba(34,197,94,0.08)',
+            borderWidth: 2.5,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointBackgroundColor: '#22c55e',
+            tension: 0.4,
+            fill: false,
+            parsing: false
+          },
+          {
+            label: 'AC — Actual Cost',
+            data: acPoints,
+            borderColor: '#f59e0b',
+            backgroundColor: 'rgba(245,158,11,0.08)',
+            borderWidth: 2.5,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointBackgroundColor: '#f59e0b',
+            tension: 0.4,
+            fill: false,
+            parsing: false
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            labels: {
+              color: '#94a3b8',
+              font: { size: 12 },
+              padding: 20,
+              usePointStyle: true,
+              pointStyle: 'circle'
+            }
+          },
+          tooltip: {
+            backgroundColor: '#1e2130',
+            borderColor: '#2d3148',
+            borderWidth: 1,
+            titleColor: '#94a3b8',
+            bodyColor: '#e2e8f0',
+            padding: 10,
+            callbacks: {
+              label: ctx => {
+                const v = ctx.parsed.y;
+                return ` ${ctx.dataset.label.split('—')[0].trim()}: ${fmt(v)}`;
+              }
+            }
+          },
+          annotation: { annotations }
+        },
+        scales: {
+          x: {
+            type: 'time',
+            time: {
+              tooltipFormat: 'MMM d, yyyy',
+              displayFormats: { day: 'MMM d', week: 'MMM d', month: 'MMM yyyy', quarter: 'QQQ yyyy', year: 'yyyy' }
+            },
+            grid: { color: '#1a1f32' },
+            ticks: { color: '#64748b', maxRotation: 30 },
+            border: { color: '#2d3148' }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: '#1a1f32' },
+            ticks: {
+              color: '#64748b',
+              callback: v => {
+                if (v >= 1000000) return '$' + (v/1000000).toFixed(1) + 'M';
+                if (v >= 1000)    return '$' + (v/1000).toFixed(0) + 'k';
+                return '$' + v;
+              }
+            },
+            border: { color: '#2d3148' }
+          }
+        }
+      }
+    });
+  }
+</script>
+</body>
+</html>
